@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import collections
 import sys
@@ -64,6 +64,8 @@ def aws_error_matches(client_error, *args, **kwargs):
         else:
             raise
     """
+    if not isinstance(client_error, botocore.exceptions.ClientError):
+        raise TypeError("Error is of type {}, not ClientError".format(client_error))
     err_args = args + tuple((kwargs.get('code'),) if isinstance(kwargs.get('code'), str) else kwargs.get('code', tuple()))
     op_args = (kwargs.get('operation_name'),) if isinstance(kwargs.get('operation_name'), str) else kwargs.get('operation_name', tuple())
     if not err_args:

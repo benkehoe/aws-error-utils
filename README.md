@@ -63,4 +63,4 @@ except catch_aws_error(matcher) as e:
 This function takes a returns an `AWSErrorInfo` object, which is a `collections.NamedTuple` with the error code, error message, HTTP status code, and operation name extracted, along with the raw response dictionary. If you're not modifying your code's exception handling, this can be useful instead of remembering exactly how the error code is stored in the response, etc.
 
 ## `aws_error_matches()`
-This is the matching logic behind `catch_aws_error()`. It takes a `ClientError`, with the rest of the arguments being error codes and operation names identical to `catch_aws_error`, except that it does not support providing a callable.
+This is the matching logic behind `catch_aws_error()`. It takes a `ClientError`, with the rest of the arguments being error codes and operation names identical to `catch_aws_error()`, except that it does not support providing a callable.
