@@ -26,6 +26,8 @@ import collections
 import sys
 import botocore.exceptions
 
+__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error']
+
 AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
 def get_aws_error_info(client_error):
     """Returns an AWSErrorInfo namedtuple with the important details of the error extracted"""
