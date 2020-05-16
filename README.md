@@ -5,7 +5,7 @@ All AWS service exceptions are raised by `boto3` as a `ClientError`, with the co
 This is not very pythonic, and the contents themselves are rather opaque, being held in a dict rather than as properties.
 The functions in this package help dealing with that.
 
-The package is on PyPI but I tend to prefer just copying the `aws_error_utils.py` file into my projects, often then my only dependency is on boto3, which is usually somewhere in my environment anyway (e.g., in a Lambda function). But that's just me.
+[The package is on PyPI](https://pypi.org/project/aws-error-utils/) but I tend to prefer just copying the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/master/aws_error_utils.py) into my projects, often then my only dependency is on `boto3`, which is usually somewhere in my environment anyway (e.g., in a Lambda function). But that's just me.
 
 ## `catch_aws_error()`
 This is probably the most useful function in the package. Make exception catching more natural. You use this function in an `except` statement instead of `ClientError`. The function takes as input error code(s), and optionally operation name(s), to match against the current raised exception. If the exception matches, the `except` block is executed. Usage looks like this:
