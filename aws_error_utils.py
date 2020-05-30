@@ -20,13 +20,15 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.0.1'
+__version__ = '1.0.3'
 
 import collections
 import sys
 import botocore.exceptions
 
-__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error']
+from botocore.exceptions import BotoCoreError, ClientError
+
+__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error', 'BotoCoreError', 'ClientError']
 
 AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
 def get_aws_error_info(client_error):
@@ -46,6 +48,7 @@ ALL_OPERATIONS = "__aws_error_utils_ALL_OPERATIONS__"
 
 def aws_error_matches(client_error, *args, **kwargs):
     """Tests if a botocore.exceptions.ClientError matches the arguments.
+
     Any positional arguments and the contents of the 'code' kwarg are matched
     against the Error.Code response field.
     If the 'operation_name' kwarg is provided, it is matched against the
@@ -76,7 +79,8 @@ def aws_error_matches(client_error, *args, **kwargs):
     return err_matches and op_matches
 
 def catch_aws_error(*args, **kwargs):
-    """For use in an except statement, returns the current error if it matches the arguments, otherwise a non-matching error
+    """For use in an except statement, returns the current error's type if it matches the arguments, otherwise a non-matching error type
+
     Any positional arguments and the contents of the 'code' kwarg are matched
     against the Error.Code response field.
     If the 'operation_name' kwarg is provided, it is matched against the
