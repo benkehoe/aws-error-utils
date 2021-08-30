@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import pytest
-import random
-import string
 import re
+import uuid
 
 from botocore.exceptions import ClientError
 
@@ -77,13 +76,13 @@ def test_error_matches_single():
     assert not aws_error_matches(error, 'RegionDisabled', operation_name='OtherOp')
 
 def test_error_matches_all():
-    code = ''.join([random.choice(string.ascii_letters) for n in range(10)])
+    code = str(uuid.uuid4())
     error = make_error('OpName', code)
 
     assert aws_error_matches(error, ALL_CODES)
     assert not aws_error_matches(error, 'SpecificCode')
 
-    op_name = ''.join([random.choice(string.ascii_letters) for n in range(10)])
+    op_name = str(uuid.uuid4())
     error = make_error(op_name, 'SomeCode')
 
     assert aws_error_matches(error, 'SomeCode', operation_name=ALL_OPERATIONS)
@@ -128,3 +127,18 @@ def test_catch():
         assert False
     except OtherError:
         assert True
+
+def test_catch_sets_info():
+    operation_name = str(uuid.uuid4())
+    code = str(uuid.uuid4())
+    message = str(uuid.uuid4())
+    http_status_code = 404
+    error = make_error(operation_name, code=code, message=message, http_status_code=http_status_code)
+
+    try:
+        raise error
+    except catch_aws_error(code) as error:
+        assert error.operation_name == operation_name
+        assert error.code == code
+        assert error.message == message
+        assert error.http_status_code == http_status_code

@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.0.4'
+__version__ = '1.1.0'
 
 import collections
 import sys
@@ -90,18 +90,29 @@ def catch_aws_error(*args, **kwargs):
     can be used to match all error codes and operation names.
     Alternatively, provide a callable that takes the error and returns true for a match.
 
+    If the error matches, the fields from AWSErrorInfo are set on the ClientError object.
+
     try:
         s3 = boto3.client('s3')
         s3.list_objects_v2(Bucket='bucket-1')
         s3.get_object(Bucket='bucket-2', Key='example')
-    except catch_aws_error('NoSuchBucket', operation_name='GetObject'):
-        pass
+    except catch_aws_error('NoSuchBucket', operation_name='GetObject') as error:
+        assert error.code == 'NoSuchBucket'
+        # error handling
     """
     client_error = sys.exc_info()[1]
+    matched = False
     if isinstance(client_error, botocore.exceptions.ClientError):
         if len(args) == 1 and callable(args[0]):
             if args[0](client_error):
-                return type(client_error)
+                matched = True
         elif aws_error_matches(client_error, *args, **kwargs):
-            return type(client_error)
-    return type('RedHerring', (BaseException,), {})
+            matched = True
+    if matched:
+        err_info = get_aws_error_info(client_error)
+        for key, value in err_info._asdict().items():
+            if not hasattr(client_error, key):
+                setattr(client_error, key, value)
+        return type(client_error)
+    else:
+        return type('RedHerring', (BaseException,), {})

@@ -2,12 +2,12 @@
 **Making botocore.exceptions.ClientError easier to deal with**
 
 All AWS service exceptions are raised by `boto3` as a `botocore.ClientError`, with the contents of the exception indicating what kind of exception happened.
-This is not very pythonic, and the contents themselves are rather opaque, being held in a dict rather than as properties.
-The functions in this package help dealing with that, to make your code less verbose and require less memorization of `ClientError` fields.
+This is not very pythonic, and the contents themselves are rather opaque, most being held in dicts rather than as properties.
+The functions in this package help dealing with that, to make your code less verbose and require less memorization of `ClientError` contents.
 
 ## Installation
 
-[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but I tend to prefer just copying the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/master/aws_error_utils.py) into my projects, often then my only dependency is on `boto3`, which is usually somewhere in my environment anyway (e.g., in a Lambda function). But that's just me.
+[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but I tend to prefer just copying the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/master/aws_error_utils.py) into my projects; often then my only dependency is on `boto3`, which is usually somewhere in my environment anyway (e.g., in a Lambda function). But that's just me.
 
 ## Usage
 If you've got code like this:
@@ -33,7 +33,7 @@ except catch_aws_error('NoSuchBucket'):
     # error handling
 ```
 
-If you have trouble remembering where all the contents in `ClientError` are, like:
+If you have trouble remembering where all the contents in `ClientError` are, like these:
 
 ```python
 client_error.response['Error']['Code']
@@ -43,8 +43,9 @@ client_error.operation_name
 ```
 
 you can replace it with:
-```
-err_info = get_aws_error_info(client)
+
+```python
+err_info = get_aws_error_info(client_error)
 
 err_info.code
 err_info.message
@@ -52,17 +53,33 @@ err_info.http_status_code
 err_info.operation_name
 ```
 
-## `catch_aws_error()`
-The primary function in the package. You use this function in an `except` statement instead of `ClientError`. The function takes as input error code(s), and optionally operation name(s), to match against the current raised exception. If the exception matches, the `except` block is executed. If your error handling still needs the error object, you can still use an `as` expression, otherwise it can be omitted (just `except catch_aws_error(...):`).
+If you're using `catch_aws_error()`, you can skip the `get_aws_error_info()` step, because the fields are set directly on the `ClientError` object:
 
 ```python
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
 except catch_aws_error('NoSuchBucket') as error:
-    print(error.response['Error']['Message'])
-    # or print(get_aws_error_info(error).message)
-    
+    error.code
+    error.message
+    error.http_status_code
+    error.operation_name
+```
+
+## `catch_aws_error()`
+The primary function in the package.
+You use this function in an `except` statement instead of `ClientError`.
+The function takes as input error code(s), and optionally operation name(s), to match against the current raised exception. If the exception matches, the `except` block is executed.
+If your error handling still needs the error object, you can still use an `as` expression, otherwise it can be omitted (just `except catch_aws_error(...):`).
+Additionally, `catch_aws_error()` sets the fields from `AWSErrorInfo` (see below) directly on the `ClientError` object.
+
+```python
+s3 = boto3.client('s3')
+try:
+    s3.get_object(Bucket='my-bucket', Key='example')
+except catch_aws_error('NoSuchBucket') as error:
+    print(error.message)
+
     # error handling
 ```
 
@@ -76,7 +93,8 @@ catch_aws_error('NoSuchBucket', 'NoSuchKey')
 catch_aws_error(code=['NoSuchBucket', 'NoSuchKey'])
 ```
 
-If there are multiple API calls in the `try` block, and you want to match against specific ones, the `operation_name` keyword argument can help. Similar to the `code` keyword argument, the operation name(s) can be provided as either as a single string or a list of strings.
+If there are multiple API calls in the `try` block, and you want to match against specific ones, the `operation_name` keyword argument can help.
+Similar to the `code` keyword argument, the operation name(s) can be provided as either as a single string or a list of strings.
 
 ```python
 try:
@@ -88,7 +106,9 @@ except catch_aws_error('NoSuchBucket', operation_name='GetObject') as error:
     # but not if the ListObjects operation raises it
 ```
 
-You must provide an error code. To match exclusively against operation name, use the `aws_error_utils.ALL_CODES` token. For completeness, there is also an `ALL_OPERATIONS` token.
+You must provide an error code.
+To match exclusively against operation name, use the `aws_error_utils.ALL_CODES` token.
+For completeness, there is also an `ALL_OPERATIONS` token.
 
 ```python
 try:
@@ -99,7 +119,8 @@ except catch_aws_error(ALL_CODES, operation_name='ListObjectsV2') as e:
     # This will execute for all ClientError exceptions raised by the ListObjectsV2 call
 ```
 
-For more complex conditions, instead of providing error codes and operation names, you can provide a callable to evaluate the exception. Note that unlike error codes, you can only provide a single callable.
+For more complex conditions, instead of providing error codes and operation names, you can provide a callable to evaluate the exception.
+Note that unlike error codes, you can only provide a single callable.
 
 ```python
 import re
@@ -117,13 +138,17 @@ except catch_aws_error(matcher) as e:
 
 ## `get_aws_error_info()`
 This function takes a returns an `AWSErrorInfo` object, which is a `collections.NamedTuple` with the following fields:
+
 * `code`
 * `message`
 * `http_status_code`
 * `operation_name`
 * `response` (the raw response dictionary)
 
-This function can be useful instead of remembering exactly how this information is stored in the `ClientError` object. You can use this regardless of whether the `catch` block uses the `catch_aws_error()` function.
+If you're not modifying your `except` statements to use `catch_aws_error()`, this function can be useful instead of remembering exactly how this information is stored in the `ClientError` object.
+
+If you're using `catch_aws_error()`, this function isn't necessary, because it sets these fields directly on the `ClientError` object.
 
 ## `aws_error_matches()`
-This is the matching logic behind `catch_aws_error()`. It takes a `ClientError`, with the rest of the arguments being error codes and operation names identical to `catch_aws_error()`, except that it does not support providing a callable.
+This is the matching logic behind `catch_aws_error()`.
+It takes a `ClientError`, with the rest of the arguments being error codes and operation names identical to `catch_aws_error()`, except that it does not support providing a callable.
