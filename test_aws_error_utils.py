@@ -19,7 +19,6 @@ import uuid
 from botocore.exceptions import ClientError
 
 from aws_error_utils import exc, get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS
-import aws_error_utils
 
 def make_error(operation_name, code=None, message=None, http_status_code=None, error=True):
     response = {}
