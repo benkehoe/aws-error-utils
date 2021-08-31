@@ -46,8 +46,11 @@ def get_aws_error_info(client_error):
 ALL_CODES = "__aws_error_utils_ALL_CODES__"
 ALL_OPERATIONS = "__aws_error_utils_ALL_OPERATIONS__"
 
-class Exc:
-    """Magic exception creator, anything used as an attribute will be converted to an AWS error
+class _Exc:
+    """Magic exception creator, any dot-attribute will be converted to an AWS error
+
+    Library users generally should not need a new instance of this class, please
+    use `aws_error_utils.exc`.
 
     >>> exc = Exc()
     >>> try: pass
@@ -55,14 +58,8 @@ class Exc:
     """
     def __getattr__(self, name):
         return catch_aws_error(name)
-exc = Exc()
 
-def __getattr__(name):
-    """Allows anything to be used as an error as long as it is prefixed with `E`
-
-    Samples: aws_error_utils.ENoSuchBucket, aws_error_utils.ENotFound"""
-    if name.startswith('E'):
-        return catch_aws_error(name[1:])
+exc = _Exc()
 
 def aws_error_matches(client_error, *args, **kwargs):
     """Tests if a botocore.exceptions.ClientError matches the arguments.

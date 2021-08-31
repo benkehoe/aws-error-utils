@@ -51,11 +51,6 @@ def test_magic_exc():
     except exc.NoSuchBucket:
         ...
 
-    try:
-        raise make_error('CreateBucket', code='NoSuchBucket', http_status_code=400)
-    except aws_error_utils.ENoSuchBucket:
-        ...
-
 def test_error_info_missing_code():
     error = make_error('AssumeRole')
     error_info = get_aws_error_info(error)
