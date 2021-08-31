@@ -18,7 +18,8 @@ import uuid
 
 from botocore.exceptions import ClientError
 
-from aws_error_utils import get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS
+from aws_error_utils import exc, get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS
+import aws_error_utils
 
 def make_error(operation_name, code=None, message=None, http_status_code=None, error=True):
     response = {}
@@ -43,6 +44,17 @@ def test_create_error_info():
     not_error = ValueError('not a ClientError')
     with pytest.raises(TypeError):
         get_aws_error_info(not_error)
+
+def test_magic_exc():
+    try:
+        raise make_error('CreateBucket', code='NoSuchBucket', http_status_code=400)
+    except exc.NoSuchBucket:
+        ...
+
+    try:
+        raise make_error('CreateBucket', code='NoSuchBucket', http_status_code=400)
+    except aws_error_utils.ENoSuchBucket:
+        ...
 
 def test_error_info_missing_code():
     error = make_error('AssumeRole')

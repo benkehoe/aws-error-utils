@@ -28,7 +28,7 @@ import botocore.exceptions
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error', 'BotoCoreError', 'ClientError']
+__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error', 'BotoCoreError', 'ClientError', 'exc']
 
 AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
 def get_aws_error_info(client_error):
@@ -45,6 +45,24 @@ def get_aws_error_info(client_error):
 
 ALL_CODES = "__aws_error_utils_ALL_CODES__"
 ALL_OPERATIONS = "__aws_error_utils_ALL_OPERATIONS__"
+
+class Exc:
+    """Magic exception creator, anything used as an attribute will be converted to an AWS error
+
+    >>> exc = Exc()
+    >>> try: pass
+    >>> except exc.NoSuchBucket
+    """
+    def __getattr__(self, name):
+        return catch_aws_error(name)
+exc = Exc()
+
+def __getattr__(name):
+    """Allows anything to be used as an error as long as it is prefixed with `E`
+
+    Samples: aws_error_utils.ENoSuchBucket, aws_error_utils.ENotFound"""
+    if name.startswith('E'):
+        return catch_aws_error(name[1:])
 
 def aws_error_matches(client_error, *args, **kwargs):
     """Tests if a botocore.exceptions.ClientError matches the arguments.
