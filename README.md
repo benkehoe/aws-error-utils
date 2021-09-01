@@ -18,6 +18,7 @@ try:
     s3.get_object(Bucket='my-bucket', Key='example')
 except botocore.ClientError as error:
     if error.response['Error']['Code'] == 'NoSuchBucket':
+        print(error.response['Error']['Message'])
         # error handling
     else:
         raise
@@ -29,7 +30,8 @@ you can replace it with:
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
-except errors.NoSuchBucket:
+except errors.NoSuchBucket as error:
+    print(error.message)
     # error handling
 ```
 
