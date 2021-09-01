@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aws-error-utils"
-version = "1.1.0"
+version = "1.2.0"
 description = "Error-handling functions for boto3/botocore"
 authors = ["Ben Kehoe"]
 license = "Apache-2.0"

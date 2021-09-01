@@ -1,7 +1,7 @@
 # aws-error-utils
 **Making botocore.exceptions.ClientError easier to deal with**
 
-All AWS service exceptions are raised by `boto3` as a `botocore.ClientError`, with the contents of the exception indicating what kind of exception happened.
+All AWS service exceptions are raised by `boto3` as a `botocore.exceptions.ClientError`, with the contents of the exception indicating what kind of exception happened.
 This is not very pythonic, and the contents themselves are rather opaque, most being held in dicts rather than as properties.
 The functions in this package help dealing with that, to make your code less verbose and require less memorization of `ClientError` contents.
 
@@ -29,7 +29,7 @@ you can replace it with:
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
-except catch_aws_error('NoSuchBucket'):
+except errors.NoSuchBucket:
     # error handling
 ```
 
@@ -53,22 +53,57 @@ err_info.http_status_code
 err_info.operation_name
 ```
 
-If you're using `catch_aws_error()`, you can skip the `get_aws_error_info()` step, because the fields are set directly on the `ClientError` object:
+If you're using `errors` or `catch_aws_error()`, you can skip the `get_aws_error_info()` step, because the fields are set directly on the `ClientError` object:
 
 ```python
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
-except catch_aws_error('NoSuchBucket') as error:
+except errors.NoSuchBucket as error:
     error.code
     error.message
     error.http_status_code
     error.operation_name
 ```
 
+## `errors`
+It's easiest to use the `errors` class if you don't have complex conditions to match.
+Using the error code as a field name in an `except` block will match that error code.
+Additionally, when you use this style, it sets the fields from `AWSErrorInfo` (see below) directly on the `ClientError` object.
+For example:
+
+```python
+s3 = boto3.client('s3')
+try:
+    s3.get_object(Bucket='my-bucket', Key='example')
+except errors.NoSuchBucket as error:
+    print(error.message)
+
+    # error handling
+```
+
+You can include multiple error codes in an `except` statement, though this is slower than combining them with a single `catch_aws_error()` call.
+
+```python
+s3 = boto3.client('s3')
+try:
+    s3.get_object(Bucket='my-bucket', Key='example')
+except (errors.NoSuchBucket, errors.NoSuchKey) as error:
+    print(error.message)
+
+    # error handling
+```
+
+You can only use this style for error codes that work as Python property names.
+For error codes like EC2's `InvalidInstanceID.NotFound`, you have to use `catch_aws_error()` (see below).
+
+Unfortunately, you cannot get tab completion for error codes on the `errors` class, as a comprehensive list of error codes is not available as a Python package (`botocore` has a small number, but they are few and incomplete).
+
+Note that the value of `errors.NoSuchBucket` is not an exception class representing the `NoSuchBucket` error, it is an alias for `catch_aws_error('NoSuchBucket')`.
+It can only be used in an `except` statement; it will raise `RuntimeError` otherwise.
+You also cannot instantiate the `errors` class.
+
 ## `catch_aws_error()`
-The primary function in the package.
-You use this function in an `except` statement instead of `ClientError`.
 The function takes as input error code(s), and optionally operation name(s), to match against the current raised exception. If the exception matches, the `except` block is executed.
 If your error handling still needs the error object, you can still use an `as` expression, otherwise it can be omitted (just `except catch_aws_error(...):`).
 Additionally, `catch_aws_error()` sets the fields from `AWSErrorInfo` (see below) directly on the `ClientError` object.

@@ -1,4 +1,4 @@
-# Copyright 2020 Ben Kehoe
+# Copyright 2020 Ben Kehoe and aws-error-utils contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,20 +20,29 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 import collections
 import sys
-import botocore.exceptions
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-__all__ = ['AWSErrorInfo', 'get_aws_error_info', 'ALL_CODES', 'ALL_OPERATIONS', 'aws_error_matches', 'catch_aws_error', 'BotoCoreError', 'ClientError']
+__all__ = [
+    'AWSErrorInfo',
+    'get_aws_error_info',
+    'ALL_CODES',
+    'ALL_OPERATIONS',
+    'aws_error_matches',
+    'catch_aws_error',
+    'BotoCoreError',
+    'ClientError',
+    'errors'
+]
 
 AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
 def get_aws_error_info(client_error):
     """Returns an AWSErrorInfo namedtuple with the important details of the error extracted"""
-    if not isinstance(client_error, botocore.exceptions.ClientError):
+    if not isinstance(client_error, ClientError):
         raise TypeError("Error is of type {}, not ClientError".format(client_error))
     return AWSErrorInfo(
             client_error.response.get('Error', {}).get('Code'),
@@ -67,7 +76,7 @@ def aws_error_matches(client_error, *args, **kwargs):
         else:
             raise
     """
-    if not isinstance(client_error, botocore.exceptions.ClientError):
+    if not isinstance(client_error, ClientError):
         raise TypeError("Error is of type {}, not ClientError".format(type(client_error)))
     err_args = args + tuple((kwargs.get('code'),) if isinstance(kwargs.get('code'), str) else kwargs.get('code', tuple()))
     op_args = (kwargs.get('operation_name'),) if isinstance(kwargs.get('operation_name'), str) else kwargs.get('operation_name', tuple())
@@ -97,12 +106,16 @@ def catch_aws_error(*args, **kwargs):
         s3.list_objects_v2(Bucket='bucket-1')
         s3.get_object(Bucket='bucket-2', Key='example')
     except catch_aws_error('NoSuchBucket', operation_name='GetObject') as error:
-        assert error.code == 'NoSuchBucket'
         # error handling
     """
-    client_error = sys.exc_info()[1]
+    # (type, value, traceback)
+    exc_info = sys.exc_info()
+    if not exc_info[0]:
+        raise RuntimeError("You must use catch_aws_error() inside an except statement")
+
+    client_error = exc_info[1]
     matched = False
-    if isinstance(client_error, botocore.exceptions.ClientError):
+    if isinstance(client_error, ClientError):
         if len(args) == 1 and callable(args[0]):
             if args[0](client_error):
                 matched = True
@@ -113,6 +126,31 @@ def catch_aws_error(*args, **kwargs):
         for key, value in err_info._asdict().items():
             if not hasattr(client_error, key):
                 setattr(client_error, key, value)
-        return type(client_error)
+        # return the error class, which will cause a match
+        return exc_info[0]
     else:
+        # this dynamically-generated type can never match a raised exception
         return type('RedHerring', (BaseException,), {})
+
+# Use a metaclass to hook into field access on the class
+class _ErrorsMeta(type):
+    def __getattr__(self, name):
+        if not sys.exc_info()[0]:
+            raise RuntimeError("You must use {}.{} inside an except statement".format(self.__name__, name))
+        return catch_aws_error(name)
+
+class errors(metaclass=_ErrorsMeta):
+    """Fields on this class used in `except` blocks match ClientErrors with an error code equal to the field name.
+
+    The value of the field is not a type. Instead, the field access calls catch_aws_error() with the field name.
+
+    This class cannot be instantiated.
+
+    try:
+        s3 = boto3.client('s3')
+        s3.get_object(Bucket='my-bucket', Key='example')
+    except errors.NoSuchBucket as error:
+        # error handling
+    """
+    def __init__(self):
+        raise RuntimeError("{} cannot be instantiated".format(self.__class__.__name__))

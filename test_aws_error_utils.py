@@ -18,7 +18,7 @@ import uuid
 
 from botocore.exceptions import ClientError
 
-from aws_error_utils import get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS
+from aws_error_utils import get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS, errors
 
 def make_error(operation_name, code=None, message=None, http_status_code=None, error=True):
     response = {}
@@ -142,3 +142,24 @@ def test_catch_sets_info():
         assert error.code == code
         assert error.message == message
         assert error.http_status_code == http_status_code
+
+def test_errors():
+    error = make_error('AssumeRole', 'RegionDisabled',  http_status_code=403)
+
+    try:
+        raise error
+        assert False
+    except errors.RegionDisabled:
+        pass
+
+    try:
+        raise error
+        assert False
+    except (errors.NoSuchRegion, errors.RegionDisabled):
+        pass
+
+    with pytest.raises(RuntimeError):
+        errors.RegionDisabled
+
+    with pytest.raises(RuntimeError):
+        errors()
