@@ -27,6 +27,9 @@ except botocore.ClientError as error:
 you can replace it with:
 
 ```python
+import boto3
+from aws_error_utils import errors
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
@@ -47,6 +50,9 @@ client_error.operation_name
 you can replace it with:
 
 ```python
+import boto3
+from aws_error_utils import get_aws_error_info
+
 err_info = get_aws_error_info(client_error)
 
 err_info.code
@@ -58,6 +64,9 @@ err_info.operation_name
 If you're using `errors` or `catch_aws_error()`, you can skip the `get_aws_error_info()` step, because the fields are set directly on the `ClientError` object:
 
 ```python
+import boto3
+from aws_error_utils import errors
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
@@ -75,6 +84,9 @@ Additionally, when you use this style, it sets the fields from `AWSErrorInfo` (s
 For example:
 
 ```python
+import boto3
+from aws_error_utils import errors
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
@@ -87,6 +99,9 @@ except errors.NoSuchBucket as error:
 You can include multiple error codes in an `except` statement, though this is slower than combining them with a single `catch_aws_error()` call.
 
 ```python
+import boto3
+from aws_error_utils import errors
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
@@ -111,6 +126,9 @@ If your error handling still needs the error object, you can still use an `as` e
 Additionally, `catch_aws_error()` sets the fields from `AWSErrorInfo` (see below) directly on the `ClientError` object.
 
 ```python
+import boto3
+from aws_error_utils import catch_aws_error
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
@@ -134,6 +152,9 @@ If there are multiple API calls in the `try` block, and you want to match agains
 Similar to the `code` keyword argument, the operation name(s) can be provided as either as a single string or a list of strings.
 
 ```python
+import boto3
+from aws_error_utils import catch_aws_error
+
 try:
     s3 = boto3.client('s3')
     s3.list_objects_v2(Bucket='bucket-1')
@@ -148,6 +169,9 @@ To match exclusively against operation name, use the `aws_error_utils.ALL_CODES`
 For completeness, there is also an `ALL_OPERATIONS` token.
 
 ```python
+import boto3
+from aws_error_utils import catch_aws_error
+
 try:
     s3 = boto3.client('s3')
     s3.list_objects_v2(Bucket='bucket-1')
@@ -161,6 +185,9 @@ Note that unlike error codes, you can only provide a single callable.
 
 ```python
 import re
+import boto3
+from aws_error_utils import catch_aws_error, get_aws_error_info
+
 def matcher(e):
     info = get_aws_error_info(e)
     return re.search('does not exist', info.message)
