@@ -13,12 +13,12 @@ The functions in this package help dealing with that, to make your code less ver
 If you've got code like this:
 
 ```python
-import boto3
+import boto3, botocore.exceptions
 
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
-except botocore.ClientError as error:
+except botocore.exceptions.ClientError as error:
     if error.response['Error']['Code'] == 'NoSuchBucket':
         print(error.response['Error']['Message'])
         # error handling
@@ -78,6 +78,8 @@ except errors.NoSuchBucket as error:
     error.http_status_code
     error.operation_name
 ```
+
+Additionally, when you *do* need to use `ClientError`, it's imported by `aws_error_utils` so you can just use `aws_error_utils.ClientError` rather than `botocore.exceptions.ClientError` (the same is true for `BotoCoreError`, the base class of all non-`ClientError` exceptions).
 
 ## `errors`
 It's easiest to use the `errors` class if you don't have complex conditions to match.
