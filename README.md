@@ -13,6 +13,8 @@ The functions in this package help dealing with that, to make your code less ver
 If you've got code like this:
 
 ```python
+import boto3
+
 s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
