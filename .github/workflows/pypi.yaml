@@ -1,0 +1,37 @@
+name: pypi
+on:
+  push:
+    tags: "v*"
+jobs:
+  test:
+    strategy:
+      matrix:
+        python: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "${{ matrix.python }}"
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+        shell: bash
+      - run: poetry install
+        shell: bash
+      - run: poetry run pytest
+        shell: bash
+  build-and-publish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+        shell: bash
+      - run: poetry build
+        shell: bash
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

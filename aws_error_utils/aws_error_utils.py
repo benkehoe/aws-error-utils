@@ -20,43 +20,74 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.3.0' # update here and pyproject.toml
+__version__ = "2.4.0"  # update here and pyproject.toml
 
-import collections
+__all__ = [
+    "AWSErrorInfo",
+    "get_aws_error_info",
+    "ALL_CODES",
+    "ALL_OPERATIONS",
+    "aws_error_matches",
+    "catch_aws_error",
+    "BotoCoreError",
+    "ClientError",
+    "errors",
+    "make_aws_error",
+]
+
+import dataclasses
 import sys
+from typing import Optional, List, Union, Callable
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-__all__ = [
-    'AWSErrorInfo',
-    'get_aws_error_info',
-    'ALL_CODES',
-    'ALL_OPERATIONS',
-    'aws_error_matches',
-    'catch_aws_error',
-    'BotoCoreError',
-    'ClientError',
-    'errors',
-    'make_aws_error',
-]
 
-AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
-def get_aws_error_info(client_error):
+@dataclasses.dataclass
+class AWSErrorInfo:
+    code: Optional[str]
+    message: Optional[str]
+    http_status_code: Optional[int]
+    operation_name: str
+    response: dict
+
+    def _asdict(self) -> dict:
+        return dataclasses.asdict(self)
+
+
+def get_aws_error_info(client_error: ClientError) -> AWSErrorInfo:
     """Returns an AWSErrorInfo namedtuple with the important details of the error extracted"""
     if not isinstance(client_error, ClientError):
         raise TypeError("Error is of type {}, not ClientError".format(client_error))
     return AWSErrorInfo(
-            client_error.response.get('Error', {}).get('Code'),
-            client_error.response.get('Error', {}).get('Message'),
-            client_error.response.get('ResponseMetadata', {}).get('HTTPStatusCode'),
-            client_error.operation_name,
-            client_error.response,
+        code=client_error.response.get("Error", {}).get("Code"),
+        message=client_error.response.get("Error", {}).get("Message"),
+        http_status_code=client_error.response.get("ResponseMetadata", {}).get(
+            "HTTPStatusCode"
+        ),
+        operation_name=client_error.operation_name,
+        response=client_error.response,
     )
+
 
 ALL_CODES = "__aws_error_utils_ALL_CODES__"
 ALL_OPERATIONS = "__aws_error_utils_ALL_OPERATIONS__"
 
-def aws_error_matches(client_error, *args, **kwargs):
+
+def _extract_tuple(arg):
+    if arg is None:
+        return tuple()
+    elif isinstance(arg, str):
+        return (arg,)
+    else:
+        return tuple(arg)
+
+
+def aws_error_matches(
+    client_error: ClientError,
+    *args: str,
+    code: Union[None, str, List[str]] = None,
+    operation_name: Union[None, str, List[str]] = None
+) -> bool:
     """Tests if a botocore.exceptions.ClientError matches the arguments.
 
     Any positional arguments and the contents of the 'code' kwarg are matched
@@ -78,17 +109,28 @@ def aws_error_matches(client_error, *args, **kwargs):
             raise
     """
     if not isinstance(client_error, ClientError):
-        raise TypeError("Error is of type {}, not ClientError".format(type(client_error)))
-    err_args = args + tuple((kwargs.get('code'),) if isinstance(kwargs.get('code'), str) else kwargs.get('code', tuple()))
-    op_args = (kwargs.get('operation_name'),) if isinstance(kwargs.get('operation_name'), str) else kwargs.get('operation_name', tuple())
+        raise TypeError(
+            "Error is of type {}, not ClientError".format(type(client_error))
+        )
+    err_args = args + _extract_tuple(code)
+    op_args = _extract_tuple(operation_name)
     if not err_args:
-        raise ValueError('No error codes provided')
-    err = client_error.response.get('Error', {}).get('Code')
+        raise ValueError("No error codes provided")
+    err = client_error.response.get("Error", {}).get("Code")
     err_matches = (err and (err in err_args)) or (ALL_CODES in err_args)
-    op_matches = (client_error.operation_name in op_args) or (not op_args) or (ALL_OPERATIONS in op_args)
+    op_matches = (
+        (client_error.operation_name in op_args)
+        or (not op_args)
+        or (ALL_OPERATIONS in op_args)
+    )
     return err_matches and op_matches
 
-def catch_aws_error(*args, **kwargs):
+
+def catch_aws_error(
+    *args: Union[str, Callable],
+    code: Union[None, str, List[str]] = None,
+    operation_name: Union[None, str, List[str]] = None
+) -> Exception:
     """For use in an except statement, returns the current error's type if it matches the arguments, otherwise a non-matching error type
 
     Any positional arguments and the contents of the 'code' kwarg are matched
@@ -120,7 +162,9 @@ def catch_aws_error(*args, **kwargs):
         if len(args) == 1 and callable(args[0]):
             if args[0](client_error):
                 matched = True
-        elif aws_error_matches(client_error, *args, **kwargs):
+        elif aws_error_matches(
+            client_error, *args, code=code, operation_name=operation_name
+        ):
             matched = True
     if matched:
         err_info = get_aws_error_info(client_error)
@@ -131,14 +175,20 @@ def catch_aws_error(*args, **kwargs):
         return exc_info[0]
     else:
         # this dynamically-generated type can never match a raised exception
-        return type('RedHerring', (BaseException,), {})
+        return type("RedHerring", (BaseException,), {})
+
 
 # Use a metaclass to hook into field access on the class
 class _ErrorsMeta(type):
-    def __getattr__(self, name):
+    def __getattr__(self, name) -> Exception:
         if not sys.exc_info()[0]:
-            raise RuntimeError("You must use {}.{} inside an except statement".format(self.__name__, name))
+            raise RuntimeError(
+                "You must use {}.{} inside an except statement".format(
+                    self.__name__, name
+                )
+            )
         return catch_aws_error(name)
+
 
 class errors(metaclass=_ErrorsMeta):
     """Fields on this class used in `except` blocks match ClientErrors with an error code equal to the field name.
@@ -153,10 +203,18 @@ class errors(metaclass=_ErrorsMeta):
     except errors.NoSuchBucket as error:
         # error handling
     """
+
     def __init__(self):
         raise RuntimeError("{} cannot be instantiated".format(self.__class__.__name__))
 
-def make_aws_error(code, message, operation_name, http_status_code=None, response=None) -> ClientError:
+
+def make_aws_error(
+    code: str,
+    message: str,
+    operation_name: str,
+    http_status_code: Optional[int] = None,
+    response: Optional[dict] = None,
+) -> ClientError:
     """Create a ClientError using the given information, useful for testing.
 
     If you have an AWSErrorInfo object, you can use it with this function:

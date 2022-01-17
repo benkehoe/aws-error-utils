@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aws-error-utils"
-version = "1.3.0" # update here and aws_error_utils.py
+version = "2.4.0" # update here and aws_error_utils.py
 description = "Error-handling functions for boto3/botocore"
 authors = ["Ben Kehoe"]
 license = "Apache-2.0"
@@ -17,12 +17,13 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.5"
+python = ">=3.6"
 botocore = "*"
+dataclasses = { version = "*", python = "<3.7" }
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.2"
 pylint = "*"
+pytest = "^6.2.5"
 
 [build-system]
 requires = ["poetry>=0.12"]

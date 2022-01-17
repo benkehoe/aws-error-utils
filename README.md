@@ -7,7 +7,7 @@ The functions in this package help dealing with that, to make your code less ver
 
 ## Installation
 
-[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but I tend to prefer just copying the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/master/aws_error_utils.py) into my projects; often then my only dependency is on `boto3`, which is usually somewhere in my environment anyway (e.g., in a Lambda function). But that's just me.
+[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but you can also just copy the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/stable/aws_error_utils/aws_error_utils.py) into your project (note that the standalone file requires Python 3.7 or greater).
 
 ## Usage
 If you've got code like this:
