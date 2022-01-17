@@ -220,3 +220,13 @@ If you're using `catch_aws_error()`, this function isn't necessary, because it s
 ## `aws_error_matches()`
 This is the matching logic behind `catch_aws_error()`.
 It takes a `ClientError`, with the rest of the arguments being error codes and operation names identical to `catch_aws_error()`, except that it does not support providing a callable.
+
+## `make_aws_error()`
+For testing, you can create `ClientError`s with the `make_aws_error()` function, which takes the following arguments:
+* `code` (required)
+* `message` (required)
+* `operation_name` (required)
+* `http_status_code`
+* `response`
+
+If a `response` dict is provided, it will be copied rather than modified.

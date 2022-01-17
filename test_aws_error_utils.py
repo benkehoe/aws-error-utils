@@ -14,13 +14,15 @@
 
 import pytest
 import re
-import uuid
+import secrets
 
 from botocore.exceptions import ClientError
 
-from aws_error_utils import get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS, errors
+from aws_error_utils import get_aws_error_info, aws_error_matches, catch_aws_error, ALL_CODES, ALL_OPERATIONS, errors, make_aws_error
 
-def make_error(operation_name, code=None, message=None, http_status_code=None, error=True):
+rand_str = lambda: secrets.token_hex(4)
+
+def _make_test_error(operation_name, code=None, message=None, http_status_code=None, error=True):
     response = {}
     if error or code or message:
         response['Error'] = {}
@@ -33,7 +35,7 @@ def make_error(operation_name, code=None, message=None, http_status_code=None, e
     return ClientError(response, operation_name)
 
 def test_create_error_info():
-    error = make_error('AssumeRole', 'RegionDisabled',  http_status_code=403)
+    error = _make_test_error('AssumeRole', 'RegionDisabled',  http_status_code=403)
     error_info = get_aws_error_info(error)
     assert error_info.code == 'RegionDisabled'
     assert error_info.operation_name == 'AssumeRole'
@@ -45,21 +47,21 @@ def test_create_error_info():
         get_aws_error_info(not_error)
 
 def test_error_info_missing_code():
-    error = make_error('AssumeRole')
+    error = _make_test_error('AssumeRole')
     error_info = get_aws_error_info(error)
     assert error_info.code is None
 
 def test_error_matches_requries_code():
     with pytest.raises(ValueError, match='No error codes provided'):
-        error = make_error('AssumeRole', 'RegionDisabled')
+        error = _make_test_error('AssumeRole', 'RegionDisabled')
         aws_error_matches(error)
 
     with pytest.raises(ValueError, match='No error codes provided'):
-        error = make_error('AssumeRole', 'RegionDisabled')
+        error = _make_test_error('AssumeRole', 'RegionDisabled')
         aws_error_matches(error, operation_name='AssumeRole')
 
 def test_error_matches_single():
-    error = make_error('AssumeRole', 'RegionDisabled')
+    error = _make_test_error('AssumeRole', 'RegionDisabled')
     assert aws_error_matches(error, 'RegionDisabled')
     assert aws_error_matches(error, 'RegionDisabled', 'OtherCode')
     assert aws_error_matches(error, 'RegionDisabled', code='OtherCode')
@@ -76,20 +78,20 @@ def test_error_matches_single():
     assert not aws_error_matches(error, 'RegionDisabled', operation_name='OtherOp')
 
 def test_error_matches_all():
-    code = str(uuid.uuid4())
-    error = make_error('OpName', code)
+    code = rand_str()
+    error = _make_test_error('OpName', code)
 
     assert aws_error_matches(error, ALL_CODES)
     assert not aws_error_matches(error, 'SpecificCode')
 
-    op_name = str(uuid.uuid4())
-    error = make_error(op_name, 'SomeCode')
+    op_name = rand_str()
+    error = _make_test_error(op_name, 'SomeCode')
 
     assert aws_error_matches(error, 'SomeCode', operation_name=ALL_OPERATIONS)
     assert not aws_error_matches(error, 'SomeCode', operation_name='SpecificOperation')
 
 def test_catch():
-    error = make_error('AssumeRole', 'RegionDisabled')
+    error = _make_test_error('AssumeRole', 'RegionDisabled')
     try:
         raise error
     except catch_aws_error('RegionDisabled') as e:
@@ -129,11 +131,11 @@ def test_catch():
         assert True
 
 def test_catch_sets_info():
-    operation_name = str(uuid.uuid4())
-    code = str(uuid.uuid4())
-    message = str(uuid.uuid4())
+    operation_name = rand_str()
+    code = rand_str()
+    message = rand_str()
     http_status_code = 404
-    error = make_error(operation_name, code=code, message=message, http_status_code=http_status_code)
+    error = _make_test_error(operation_name, code=code, message=message, http_status_code=http_status_code)
 
     try:
         raise error
@@ -144,7 +146,7 @@ def test_catch_sets_info():
         assert error.http_status_code == http_status_code
 
 def test_errors():
-    error = make_error('AssumeRole', 'RegionDisabled',  http_status_code=403)
+    error = _make_test_error('AssumeRole', 'RegionDisabled',  http_status_code=403)
 
     try:
         raise error
@@ -163,3 +165,61 @@ def test_errors():
 
     with pytest.raises(RuntimeError):
         errors()
+
+def test_make_aws_error():
+    args = {
+        "operation_name": "AssumeRole",
+        "code": "RegionDisabled",
+        "message": "Region is disabled",
+        "http_status_code": 403,
+    }
+    error_standard = _make_test_error(**args)
+    error = make_aws_error(**args)
+
+    assert isinstance(error, ClientError)
+    assert error_standard.operation_name == error.operation_name
+    assert error_standard.response == error.response
+    assert error_standard.args == error.args
+
+    try:
+        raise make_aws_error(**args)
+    except errors.RegionDisabled:
+        pass
+
+    response_key1 = rand_str()
+    response_value1 = rand_str()
+    response_key2 = rand_str()
+    response_key3 = rand_str()
+    response_value3 = rand_str()
+    response = {
+        response_key1: response_value1,
+        "ResponseMetadata": {
+            response_key2: {
+                response_key3: response_value3,
+            }
+        },
+    }
+
+    error_code = rand_str()
+    operation_name = rand_str()
+    http_status_code = 404
+    error = make_aws_error(
+        code=error_code,
+        message=None,
+        operation_name=operation_name,
+        http_status_code=http_status_code,
+        response=response,
+    )
+
+    assert not error.response is response  # a copy was made
+    assert "Error" not in response
+    assert error.response == {
+        "Error": {"Code": error_code},
+        response_key1: response_value1,
+        "ResponseMetadata": {
+            "HTTPStatusCode": http_status_code,
+            response_key2: {
+                response_key3: response_value3,
+            },
+        },
+    }

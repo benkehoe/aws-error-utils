@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = '1.2.0'
+__version__ = '1.3.0' # update here and pyproject.toml
 
 import collections
 import sys
@@ -36,7 +36,8 @@ __all__ = [
     'catch_aws_error',
     'BotoCoreError',
     'ClientError',
-    'errors'
+    'errors',
+    'make_aws_error',
 ]
 
 AWSErrorInfo = collections.namedtuple('AWSErrorInfo', ['code', 'message', 'http_status_code', 'operation_name', 'response'])
@@ -154,3 +155,27 @@ class errors(metaclass=_ErrorsMeta):
     """
     def __init__(self):
         raise RuntimeError("{} cannot be instantiated".format(self.__class__.__name__))
+
+def make_aws_error(code, message, operation_name, http_status_code=None, response=None) -> ClientError:
+    """Create a ClientError using the given information, useful for testing.
+
+    If you have an AWSErrorInfo object, you can use it with this function:
+    make_aws_error(**my_error_info._asdict())
+    """
+    if response is None:
+        response = {}
+    else:
+        response = response.copy()
+    if code or message:
+        response["Error"] = {}
+    if code:
+        response["Error"]["Code"] = code
+    if message:
+        response["Error"]["Message"] = message
+    if http_status_code:
+        if "ResponseMetadata" not in response:
+            response["ResponseMetadata"] = {}
+        else:
+            response["ResponseMetadata"] = response["ResponseMetadata"].copy()
+        response["ResponseMetadata"]["HTTPStatusCode"] = http_status_code
+    return ClientError(response, operation_name)
