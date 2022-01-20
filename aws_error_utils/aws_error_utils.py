@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = "2.4.0"  # update here and pyproject.toml
+__version__ = "2.5.0"  # update here and pyproject.toml
 
 __all__ = [
     "AWSErrorInfo",
@@ -37,7 +37,7 @@ __all__ = [
 
 import dataclasses
 import sys
-from typing import Optional, List, Union, Callable
+from typing import Optional, List, Union, Callable, Type
 
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -130,7 +130,7 @@ def catch_aws_error(
     *args: Union[str, Callable],
     code: Union[None, str, List[str]] = None,
     operation_name: Union[None, str, List[str]] = None
-) -> Exception:
+) -> Type[BaseException]:
     """For use in an except statement, returns the current error's type if it matches the arguments, otherwise a non-matching error type
 
     Any positional arguments and the contents of the 'code' kwarg are matched
@@ -163,7 +163,7 @@ def catch_aws_error(
             if args[0](client_error):
                 matched = True
         elif aws_error_matches(
-            client_error, *args, code=code, operation_name=operation_name
+            client_error, *args, code=code, operation_name=operation_name  # type: ignore
         ):
             matched = True
     if matched:
@@ -180,7 +180,7 @@ def catch_aws_error(
 
 # Use a metaclass to hook into field access on the class
 class _ErrorsMeta(type):
-    def __getattr__(self, name) -> Exception:
+    def __getattr__(self, name) -> Type[BaseException]:
         if not sys.exc_info()[0]:
             raise RuntimeError(
                 "You must use {}.{} inside an except statement".format(

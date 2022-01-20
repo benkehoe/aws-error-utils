@@ -19,6 +19,8 @@ jobs:
         shell: bash
       - run: poetry run pytest
         shell: bash
+      - run: poetry run mypy aws_error_utils --ignore-missing-imports
+        shell: bash
   build-and-publish:
     needs: test
     runs-on: ubuntu-latest

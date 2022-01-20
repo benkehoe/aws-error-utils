@@ -1,5 +1,10 @@
 # Changelog
 
+`aws-error-utils` uses [monotonic versioning](blog.appliedcompscilab.com/monotonic_versioning_manifesto/).
+
+## v2.5
+* Fix type annotations.
+
 ## v2.4
 * Require Python 3.6 as 3.5 is EOL.
 * Update `AWSErrorInfo` to be a dataclass.
