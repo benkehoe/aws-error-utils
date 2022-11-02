@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = "2.5.0"  # update here and pyproject.toml
+__version__ = "2.6.0"  # update here and pyproject.toml
 
 __all__ = [
     "AWSErrorInfo",
@@ -187,6 +187,8 @@ class _ErrorsMeta(type):
                     self.__name__, name
                 )
             )
+        if name in ["ALL", "ALL_CODES"]:
+            name = ALL_CODES
         return catch_aws_error(name)
 
 

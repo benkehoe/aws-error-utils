@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aws-error-utils"
-version = "2.5.0" # update here and aws_error_utils.py
+version = "2.6.0" # update here and aws_error_utils.py
 description = "Error-handling functions for boto3/botocore"
 authors = ["Ben Kehoe"]
 license = "Apache-2.0"

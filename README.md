@@ -36,6 +36,8 @@ s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
 except errors.NoSuchBucket as error:
+# or
+# except catch_aws_error('NoSuchBucket') as error:
     print(error.message)
     # error handling
 ```
@@ -114,6 +116,8 @@ except (errors.NoSuchBucket, errors.NoSuchKey) as error:
 
     # error handling
 ```
+
+You can catch all `ClientError`s with `errors.ALL`.
 
 You can only use this style for error codes that work as Python property names.
 For error codes like EC2's `InvalidInstanceID.NotFound`, you have to use `catch_aws_error()` (see below).

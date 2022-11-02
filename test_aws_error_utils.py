@@ -189,6 +189,22 @@ def test_errors():
     with pytest.raises(RuntimeError):
         errors()
 
+    try:
+        raise error
+    except errors.ALL as e:
+        pass
+    except Exception:
+        assert False
+
+    class OtherError(Exception):
+        pass
+
+    try:
+        raise OtherError("test")
+    except errors.ALL as e:
+        assert False
+    except OtherError:
+        assert True
 
 def test_make_aws_error():
     args = {
