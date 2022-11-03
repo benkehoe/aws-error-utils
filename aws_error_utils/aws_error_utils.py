@@ -20,7 +20,7 @@ status_code = e.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
 operation_name = e.operation_name
 """
 
-__version__ = "2.6.0"  # update here and pyproject.toml
+__version__ = "2.7.0"  # update here and pyproject.toml
 
 __all__ = [
     "AWSErrorInfo",

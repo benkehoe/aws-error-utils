@@ -2,6 +2,9 @@
 
 `aws-error-utils` uses [monotonic versioning](blog.appliedcompscilab.com/monotonic_versioning_manifesto/).
 
+## v2.7
+* Remove support for Python 3.6.
+
 ## v2.6
 * Add `errors.ALL` to match all `ClientError`s.
 
