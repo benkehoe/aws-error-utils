@@ -178,7 +178,7 @@ For completeness, there is also an `ALL_OPERATIONS` token.
 
 ```python
 import boto3
-from aws_error_utils import catch_aws_error
+from aws_error_utils import ALL_CODES, catch_aws_error
 
 try:
     s3 = boto3.client('s3')
