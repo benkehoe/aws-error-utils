@@ -7,7 +7,9 @@ The functions in this package help dealing with that, to make your code less ver
 
 ## Installation
 
-[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but you can also just copy the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/stable/aws_error_utils/aws_error_utils.py) into your project (note that the standalone file requires Python 3.7 or greater).
+[The package is on PyPI](https://pypi.org/project/aws-error-utils/) for pip-installing, but you can also just copy the [`aws_error_utils.py` file](https://raw.githubusercontent.com/benkehoe/aws-error-utils/stable/aws_error_utils/aws_error_utils.py) into your project.
+
+aws-error-utils requires Python 3.7 or higher.
 
 ## Usage
 If you've got code like this:
@@ -112,6 +114,7 @@ s3 = boto3.client('s3')
 try:
     s3.get_object(Bucket='my-bucket', Key='example')
 except (errors.NoSuchBucket, errors.NoSuchKey) as error:
+    # note: catch_aws_error("NoSuchBucket", "NoSuchKey") is faster
     print(error.message)
 
     # error handling
@@ -209,7 +212,7 @@ except catch_aws_error(matcher) as e:
 ```
 
 ## `get_aws_error_info()`
-This function takes a returns an `AWSErrorInfo` object, which is a `collections.NamedTuple` with the following fields:
+This function takes a returns an `AWSErrorInfo` object, which is a [dataclass](https://docs.python.org/3/library/dataclasses.html) with the following fields:
 
 * `code`
 * `message`
