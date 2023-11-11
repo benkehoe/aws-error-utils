@@ -13,15 +13,15 @@
 # limitations under the License.
 
 from .aws_error_utils import (
-    __version__,
-    AWSErrorInfo,
-    get_aws_error_info,
-    ALL_CODES,
-    ALL_OPERATIONS,
-    aws_error_matches,
-    catch_aws_error,
-    BotoCoreError,
-    ClientError,
-    errors,
-    make_aws_error,
+    __version__ as __version__,
+    AWSErrorInfo as AWSErrorInfo,
+    get_aws_error_info as get_aws_error_info,
+    ALL_CODES as ALL_CODES,
+    ALL_OPERATIONS as ALL_OPERATIONS,
+    aws_error_matches as aws_error_matches,
+    catch_aws_error as catch_aws_error,
+    BotoCoreError as BotoCoreError,
+    ClientError as ClientError,
+    errors as errors,
+    make_aws_error as make_aws_error,
 )
